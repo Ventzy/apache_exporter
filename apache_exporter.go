@@ -42,6 +42,7 @@ type Exporter struct {
 	scrapeFailures prometheus.Counter
 	accessesTotal  *prometheus.Desc
 	kBytesTotal    *prometheus.Desc
+	durationsTotal *prometheus.Desc
 	cpuload        prometheus.Gauge
 	uptime         *prometheus.Desc
 	workers        *prometheus.GaugeVec
@@ -70,6 +71,11 @@ func NewExporter(uri string) *Exporter {
 		kBytesTotal: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, "", "sent_kilobytes_total"),
 			"Current total kbytes sent (*)",
+			nil,
+			nil),
+		durationsTotal: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, "", "durations_total"),
+			"Current total durations (*)",
 			nil,
 			nil),
 		cpuload: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -115,6 +121,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- e.up
 	ch <- e.accessesTotal
 	ch <- e.kBytesTotal
+	ch <- e.durationsTotal
 	ch <- e.uptime
 	e.cpuload.Describe(ch)
 	e.scrapeFailures.Describe(ch)
@@ -218,6 +225,13 @@ func (e *Exporter) collect(ch chan<- prometheus.Metric) error {
 			}
 
 			ch <- prometheus.MustNewConstMetric(e.kBytesTotal, prometheus.CounterValue, val)
+		case key == "Total Duration":
+			val, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return err
+			}
+
+			ch <- prometheus.MustNewConstMetric(e.durationsTotal, prometheus.CounterValue, val)
 		case key == "CPULoad":
 			val, err := strconv.ParseFloat(v, 64)
 			if err != nil {
